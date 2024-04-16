@@ -1,0 +1,235 @@
+CTD description and deployment manual
+
+This is the software description and dev-ops/deployments manual of the CTD API for the CFDE Playbook platform.
+
+1. Intro
+
+The CTD API is a hybrid software solution meant to serve the CFDE Playbook platform. 
+CTD API consists of two parts, the Java Spring Boot API and a group of R and its file resources.
+The Java API receives data using the HTTP POST method. 
+The R script is initiated for the JAVA web app as a subprocess.
+
+2. Software architecture
+
+The software solution is made of two parts, the JAVA API web app and the R scripts with their accompanying resources.
+The working folder needs to have the following structure:
+
+working_folder/
+	ctd_code_ver11.R
+	ctdCustomMatrix/
+			ctd_wrapper_cluster.R
+			getPerm_genes_cluster.pbs
+			getPermN_genes.R
+			submit_job.pbs
+	inputFiles/
+	outputFiles/
+	pb_ctd_shutdown.bash
+	pb_ctd_startup_dev.bash
+	playbook_ctd-0.0.1-SNAPSHOT.jar
+	precalculatedMatrices/
+			kegg_large_graph.csv
+			kegg_ranks.RData
+			string_med_conf_lower.csv
+			string_ranks.RData
+		
+Note: Once the Java jar file is executed a nohup output file will be created in the working_folder as well as the pb_logs/ folder containing the main playbook_ctd.log log file for the Java web app. 		
+	
+Details:		
+		
+	1) working_folder - can be anywhere and named anything, pay attention to set the ownership and permissions accordingly.
+	2) playbook_ctd-0.0.1-SNAPSHOT.jar - java spring boot web app
+	3) pb_ctd_startup_dev.bash - bash script that starts/executes the Java jar file.
+	4) pb_ctd_shutdown.bash - bash script that stops the jar file. The script uses the ps and grep commands to get the details of the process with the name playbook_ctd and stops it using its process ID.
+	5) inputFolder/ - folder where the files received in the HTTP Request are saved on the file system.
+	6) outputFolder/ - folder where the output files created by the R script will be placed, this includes the .csv, .json and .RData files. 
+	7) precalculatedMatrices/ - folder that contains that static files for the pre-calculated matrices (graph types).
+	8) ctdCustomMatrix/ - folder that contains R scripts and other files that produces RData files for custom matrices (user defined)
+	9) ctd_wrapper_cluster.R - main R script for creating custom RData files based on user inputted gene sets and adjacency matrices.
+	10) kegg_large_graph.csv and kegg_ranks.RData - resource files for the "kegg" type graph.
+	11) string_med_conf_lower.csv and string_ranks.RData - resource files for the "string" type graph.
+			
+3. Process workflow	
+
+In general, once a HTTP POST request is received the Java web app will create a file in the inputFolder/ that contains the same data as the input file in the HTTP request.
+The file will be named according to the name of the received file plus a date and timestamp will be added to the name.
+If the data is received using the "geneList" API (JSON string) the file will be named using the current date and timestamp.
+Once the files are created the Java web app will start the appropriated R script as a Subprocess, provide it with the path to the input file and the pattern of the name for the output file.
+Once the Subprocess is finished the created output files are opened and read by the Java app. 
+The content of the output files is merged into a single JSON format and returned as text in the HTTP response or the file is return directly as a response.
+
+4. Dev-Ops procedure.
+
+NOTES: 
+* Make sure that all of the scripts, files and resources are formatted using the dos2unix toll in order to avoid any formatting problems introduced by the Windows OS.
+* It is advisable to create a specific user group for the app.
+* The R scripts do not require any setup at all in terms of configuration.
+
+
+1) Create the working directory and set the ownership and permissions accordingly.
+2) Create the substructure of files and folder as described in Part 2. Software architecture.
+3) Pay attention to leave the names of subfolders and crucial resources as defined in this manual since these names are set in the Java configuration file that is part of the jar file.
+4) Set the two bash scripts as executable, example: sudo chmod u=x file_name
+5) Start the Java app by executing the bash script pb_ctd_startup_dev.bash. This will create the file nohup.out and the pb_logs folder.
+6) Open the nohup.out and confirm that the Java app has started correctly. Check the port on which the app is listening.
+
+
+Appendix A - API request and response data formats.
+
+	Note: Port is set to 8018, this is a Java internal setting.
+
+	A.1. CTD response from gene list
+
+		Endpoint: http://ip:8018/rest/playbook_ctd/ctd/geneList
+
+		Method: HTTP POST
+
+		HTTP headers:
+		Content-Type: application/json
+
+		Body type: text
+
+		Input format (string):
+		{
+			"graphType":"kegg_or_string",
+			"geneList":[
+				"gene_1",
+				"gene_2"....
+				]
+		}
+		
+		Response format:	
+			{
+				"highlyConnectedGenes":[			
+					"gene_1",
+					"gene_2"....
+					],
+				"guiltyByAssociationGenes":[			
+					"gene_1",
+					"gene_2"....
+					],
+				"jsonGraph":{
+					"nodes":[
+						{
+							"name": "gene_1", 
+							"type": "gene" 
+						},....{}
+					],
+					"interactions":[
+						{
+							"source": "gene_1", 
+							"target": "gene_2" 
+						},....{}
+					]
+				},
+				"message": null
+			}
+			
+		curl example:
+
+		curl -i -X POST \
+		   -H "Content-Type:application/json" \
+		   -d \
+		 '{"graphType":"kegg","geneList":["plxna2","pycard","tomm40l","elmo1","neu2",.....]}' \
+		 'http://ip:port/rest/playbook_ctd/ctd/geneList'		
+			
+	A.2. CTD response from file upload API
+
+		Endpoint: http://ip:8018/rest/playbook_ctd/ctd/file
+
+		Method: HTTP POST
+
+		HTTP headers:
+		Content-Type: multipart/form-data
+
+		Body Tyle: form
+
+		Form parameters:
+
+		1) "graphType", posible value: "kegg", "string"
+		2) "csvGenesFile", file attached 
+	
+		Response format: Same as in A.1!	
+	
+		curl example:
+		
+		Note: Replace genes_file_name.csv with actual file path and name.
+		
+		curl -i -X POST \
+		   -H "Content-Type:multipart/form-data" \
+		   -F "graphType=string" \
+		   -F "csvGenesFile=@\"./genes_file_name.csv\";type=text/csv;filename=\"genes_file_name.csv\"" \
+		 'http://ip:port/rest/playbook_ctd/ctd/file'
+					
+		curl -i -X POST \
+		   -H "Content-Type:multipart/form-data" \
+		   -F "graphType=kegg" \
+		   -F "csvGenesFile=@\"./genes_file_name.csv\";type=text/csv;filename=\"genes_file_name.csv\"" \
+		 'http://ip:port/rest/playbook_ctd/ctd/file'
+ 					
+	
+	A.3. Creater a custom CTD Matrix
+	
+		Endpoint: http://ip:8018/rest/playbook_ctd/getCtdCustomMatrix
+
+		Method: HTTP POST
+
+		HTTP headers:
+		Content-Type: multipart/form-data
+
+		Body Tyle: form
+
+		Form parameters:
+
+		1) "customMatrix", file attached, csv
+		2) "geneList", file attached, csv/txt 
+		
+		Response: Custom RData file.
+		
+		curl example:
+		
+		Note: Replace genes_file_name.csv and matrix_file_name.csv with actual file paths and names.
+		
+		curl -i -X POST \
+		   -H "Content-Type:multipart/form-data" \
+		   -F "customMatrix=@\"./matrix_file_name.csv\";type=text/csv;filename=\"matrix_file_name.csv\"" \
+		   -F "geneList=@\"./genes_file_name.csv\";type=text/csv;filename=\"genes_file_name.csv\"" \
+		 'http://ip:port/rest/playbook_ctd/getCtdCustomMatrix'
+		
+	A.4. Use a custom CTD Matrix
+	
+		Endpoint: http://ip:8018/rest/playbook_ctd/ctd/useCustomMatrix
+
+		Method: HTTP POST
+
+		HTTP headers:
+		Content-Type: multipart/form-data
+
+		Body Tyle: form
+
+		Form parameters:
+
+		1) "customMatrix", file attached, csv
+		2) "csvGenesFile", file attached, csv/txt 
+		3) "customRData", file attached, RData (this file is the output from API in A.3.)
+		
+		Response format: Same as in A.1!
+
+		curl example:
+		
+		Note: Replace genes_file_name.csv, matrix_file_name.csv and permutations_file_name.RData with actual file paths and names.
+		
+		curl -i -X POST \
+		   -H "Content-Type:multipart/form-data" \
+		   -F "customMatrix=@\"./matrix_file_name.csv\";type=text/csv;filename=\"matrix_file_name.csv\"" \
+		   -F "csvGenesFile=@\"./genes_file_name.csv\";type=text/csv;filename=\"genes_file_name.csv\"" \
+		   -F "customRData=@\"./permutations_file_name.RData\";filename=\"permutations_file_name.RData\"" \
+		 'http://ip:port/rest/playbook_ctd/ctd/useCustomMatrix'
+ 
+		
+	A.5. Test Endpoint
+	
+		Endpoint: http://ip:8018/rest/playbook_ctd/test
+
+		Method: HTTP GET
+
+		Response (String): "OK!"

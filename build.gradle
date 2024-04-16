@@ -1,0 +1,71 @@
+plugins {
+	id 'org.springframework.boot' version '2.3.1.RELEASE'
+	id 'io.spring.dependency-management' version '1.0.9.RELEASE'
+	id 'java'
+	id 'application'
+}
+
+group = 'com.cfde.playbook_ctd'
+version = '0.0.8-SNAPSHOT'
+sourceCompatibility = '1.8'
+project.archivesBaseName = 'playbook_ctd'
+
+//must be set if the application plugin is used
+mainClassName='com.cfde.playbook_ctd.PlaybookCTDApiApplication'
+
+bootJar {
+	mainClassName = 'com.cfde.playbook_ctd.PlaybookCTDApiApplication'
+}
+
+repositories {
+	mavenCentral()
+	maven { url 'https://repo.spring.io/snapshot' }
+	maven { url 'https://repo.spring.io/milestone' }
+}
+
+springBoot {
+	mainClassName = 'com.cfde.playbook_ctd.PlaybookCTDApiApplication'
+}
+
+dependencies {
+	//spring boot
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-test'
+
+	//api documentation
+	implementation 'io.springfox:springfox-swagger2:2.9.2'
+	implementation 'io.springfox:springfox-swagger-ui:2.9.2'
+
+	//security
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework:spring-tx'
+	implementation group: 'io.jsonwebtoken', name: 'jjwt', version: '0.9.1'
+
+	//utils
+	implementation group: 'javax.servlet', name: 'javax.servlet-api', version: '4.0.1'
+	implementation group: 'log4j', name: 'log4j', version: '1.2.17'
+	implementation group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1.1'
+	implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.12.2'
+	implementation group: 'org.mindrot', name: 'jbcrypt', version: '0.4'
+	implementation group: 'com.sun.mail', name: 'javax.mail', version: '1.6.2'
+	implementation group: 'org.passay', name: 'passay', version: '1.6.1'
+	implementation 'commons-io:commons-io:2.11.0'
+
+	//testing
+	testImplementation group: 'org.springframework.security', name: 'spring-security-test', version: '5.3.3.RELEASE'
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+}
+
+sourceSets {
+	main {
+		resources {
+			srcDirs = ["$projectDir/src/main/resources/"]
+		}
+	}
+}
+
+test {
+	useJUnitPlatform()
+}

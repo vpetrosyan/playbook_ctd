@@ -1,0 +1,25 @@
+/.idea
+/build/
+/out/
+/log/
+/logs/
+/.gradle/
+/.nb-gradle/
+/gradle/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
