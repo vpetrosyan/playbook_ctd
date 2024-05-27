@@ -12,6 +12,6 @@ public interface CTDService {
     ResponseFormat mainCTDList(String graphType, ArrayList<String> geneList);
     ResponseFormat mainCTDFile(String graphType, MultipartFile csvGenesFile);
     ResponseEntity<Resource> createCustomMatrix(MultipartFile geneExpressionsCSV);
+    ResponseEntity<Resource> getCustomPermutations(MultipartFile matrix, MultipartFile geneList);
     ResponseFormat useCustomMatrix(MultipartFile matrix, MultipartFile csvGenesFile, MultipartFile customRData);
-    ResponseEntity<Resource> getCtdCustomRData(MultipartFile matrix, MultipartFile geneList);
 }

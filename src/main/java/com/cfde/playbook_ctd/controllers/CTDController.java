@@ -44,13 +44,13 @@ public class CTDController {
             produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
     public ResponseFormat mainCTDList(@RequestBody GeneSet geneSet){
         if(geneSet == null || geneSet.getGraphType() == null || !checkSubmittedGraphTypeValue(geneSet.getGraphType()) || geneSet.getGeneList()  == null){
-            return new ResponseFormat(new Report(Constants.REPORT_TYPE_ERROR,"Request parameters not valid!"));
+            return new ResponseFormat(new Report(Constants.REPORT_TYPE_ERROR,"Request parameters not valid, please check the submitted values!"));
         }
 
         int gN = geneSet.getGeneList().size();
 
         if(gN == 0){
-            return new ResponseFormat(new Report(Constants.REPORT_TYPE_ERROR,"No genes submitted!"));
+            return new ResponseFormat(new Report(Constants.REPORT_TYPE_ERROR,"The submitted gene list is empty!"));
         }
 
         if(gN < 10 || gN > 150){
@@ -63,7 +63,7 @@ public class CTDController {
     @PostMapping(value = "/ctd/file")
     public ResponseFormat mainCTDFile(@RequestParam("graphType") String graphType, @RequestParam("csvGenesFile") MultipartFile csvGenesFile){
         if(graphType == null || !checkSubmittedGraphTypeValue(graphType) || csvGenesFile == null){
-            return new ResponseFormat(new Report(Constants.REPORT_TYPE_ERROR,"Request parameters not valid!"));
+            return new ResponseFormat(new Report(Constants.REPORT_TYPE_ERROR,"Request parameters not valid, please check the submitted values!!"));
         }
         return ctdService.mainCTDFile(graphType, csvGenesFile);
     }
@@ -76,6 +76,15 @@ public class CTDController {
         return ctdService.createCustomMatrix(geneExpressionsCSV);
     }
 
+    @PostMapping(value = "/getCustomPermutations", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<Resource> getCustomPermutations(@RequestParam("customMatrix") MultipartFile matrix,
+                                                          @RequestParam("geneList") MultipartFile geneList){
+        if(matrix == null || geneList == null){
+            return null;
+        }
+        return ctdService.getCustomPermutations(matrix, geneList);
+    }
+
     @PostMapping(value = "/ctd/useCustomMatrix")
     public ResponseFormat useCustomMatrix(@RequestParam("customMatrix") MultipartFile matrix,
                                           @RequestParam("csvGenesFile") MultipartFile csvGenesFile,
@@ -85,15 +94,6 @@ public class CTDController {
             return new ResponseFormat(new Report(Constants.REPORT_TYPE_ERROR,"Request parameters not valid!"));
         }
         return ctdService.useCustomMatrix(matrix, csvGenesFile, customRData);
-    }
-
-    @PostMapping(value = "/getCtdCustomMatrix", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<Resource> getCtdCustomRData(@RequestParam("customMatrix") MultipartFile matrix,
-                                                      @RequestParam("geneList") MultipartFile geneList){
-        if(matrix == null || geneList == null){
-            return null;
-        }
-        return ctdService.getCtdCustomRData(matrix, geneList);
     }
 
     private boolean checkSubmittedGraphTypeValue(String graphValue){

@@ -77,7 +77,7 @@ public class CTDServiceImpl implements CTDService {
 
         ArrayList<String> geneList = getContentOfSubmittedGenesFile(csvGenesFile);
         if(geneList == null || geneList.size() == 0){
-            new ResponseFormat(new Report(Constants.REPORT_TYPE_ERROR,"Unable to extract genes from uploaded file!"));
+            new ResponseFormat(new Report(Constants.REPORT_TYPE_ERROR,"Unable to get the Gene list from uploaded file!"));
         }
 
         if(geneList.size() < 10 || geneList.size() > 150){
@@ -107,6 +107,20 @@ public class CTDServiceImpl implements CTDService {
     }
 
     @Override
+    public ResponseEntity<Resource> getCustomPermutations(MultipartFile matrix, MultipartFile geneList){
+        String dateTimeJoined = DateUtils.dateToStringParser(new Date(), Constants.TIME_PATTERN_JOINED);
+
+        Path saveLocationMatrix = createAbsFilesPath(inputFilePath, createAdjMatrixFileName(dateTimeJoined));
+        Path saveLocationGeneList = createAbsFilesPath(inputFilePath, createGeneSetFileName(dateTimeJoined));
+        Path rScriptCustomMatrixPath = createAbsFilesPath(ctdCustomMatrixScriptFolderLocation, rCustomMatrixScriptName);
+
+        FileUtilities.copyContentToFileAtPath(matrix, saveLocationMatrix);
+        FileUtilities.copyContentToFileAtPath(geneList, saveLocationGeneList);
+
+        return executeCustomPermutations(saveLocationMatrix, saveLocationGeneList, rScriptCustomMatrixPath);
+    }
+
+    @Override
     public ResponseFormat useCustomMatrix(MultipartFile matrix, MultipartFile csvGenesFile, MultipartFile customRData){
         String dateTimeJoined = DateUtils.dateToStringParser(new Date(), Constants.TIME_PATTERN_JOINED);
 
@@ -120,20 +134,6 @@ public class CTDServiceImpl implements CTDService {
         FileUtilities.copyContentToFileAtPath(customRData, saveLocationRData);
 
         return executeCTDRScriptWithCustomFiles(saveLocationMatrix, saveLocationGeneFile, saveLocationRData, rScriptLocation);
-    }
-
-    @Override
-    public ResponseEntity<Resource> getCtdCustomRData(MultipartFile matrix, MultipartFile geneList){
-        String dateTimeJoined = DateUtils.dateToStringParser(new Date(), Constants.TIME_PATTERN_JOINED);
-
-        Path saveLocationMatrix = createAbsFilesPath(inputFilePath, createAdjMatrixFileName(dateTimeJoined));
-        Path saveLocationGeneList = createAbsFilesPath(inputFilePath, createGeneSetFileName(dateTimeJoined));
-        Path rScriptCustomMatrixPath = createAbsFilesPath(ctdCustomMatrixScriptFolderLocation, rCustomMatrixScriptName);
-
-        FileUtilities.copyContentToFileAtPath(matrix, saveLocationMatrix);
-        FileUtilities.copyContentToFileAtPath(geneList, saveLocationGeneList);
-
-        return executeCustomMatrixCTD_RScript(saveLocationMatrix, saveLocationGeneList, rScriptCustomMatrixPath);
     }
 
     private ResponseFormat excuteCTD_RScript(String graphType, Path rScriptLocation, Path absPathGenesFile){
@@ -222,26 +222,7 @@ public class CTDServiceImpl implements CTDService {
         ResponseEntity re = null;
         if(outMatrixFile != null){
             logger.info("Found custom matrix file: "+outMatrixFile.getName()+", using pattern: "+customPattern);
-
-            try{
-                Path finalMatrixPath = Paths.get(outMatrixFile.getAbsolutePath());
-                ByteArrayResource resource = new ByteArrayResource(Files.readAllBytes(finalMatrixPath));
-
-                HttpHeaders headers = new HttpHeaders();
-                headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + finalMatrixPath.getFileName().toString());
-                headers.add("Cache-Control", "no-cache, no-store, must-revalidate");
-                headers.add("Pragma", "no-cache");
-                headers.add("Expires", "0");
-
-                re = ResponseEntity.ok()
-                        .headers(headers)
-                        .contentLength(outMatrixFile.length())
-                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                        .body(resource);
-            }catch(IOException ioe){
-                logger.error(StackTracePrinter.printStackTrace(ioe));
-            }
-
+            re = createFileForResponse(outMatrixFile);
             //delete matrix file
             deleteFileFromPath(outMatrixFile);
         }else{
@@ -253,7 +234,7 @@ public class CTDServiceImpl implements CTDService {
         return re;
     }
 
-    private ResponseEntity<Resource> executeCustomMatrixCTD_RScript(Path saveLocationMatrix, Path saveLocationGeneList, Path rScriptCustomMatrixPath){
+    private ResponseEntity<Resource> executeCustomPermutations(Path saveLocationMatrix, Path saveLocationGeneList, Path rScriptCustomMatrixPath){
         //example command: Rscript ctd_wrapper_cluster.R “adj_matrix.csv” “module_genes.csv”
         String rScriptFullPathParam = "{R_SCRIPT_PATH}";
         String absPathToMatrixFileParam = "{MATRIX_FILE_PATH}";
@@ -279,25 +260,7 @@ public class CTDServiceImpl implements CTDService {
         ResponseEntity re = null;
         if(outRDataFile != null){
             logger.info("Found RData file: "+outRDataFile.getName()+", using pattern: "+customPattern);
-            try{
-                Path finalRDataPath = Paths.get(outRDataFile.getAbsolutePath());
-                ByteArrayResource resource = new ByteArrayResource(Files.readAllBytes(finalRDataPath));
-
-                HttpHeaders headers = new HttpHeaders();
-                headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + finalRDataPath.getFileName().toString());
-                headers.add("Cache-Control", "no-cache, no-store, must-revalidate");
-                headers.add("Pragma", "no-cache");
-                headers.add("Expires", "0");
-
-                re = ResponseEntity.ok()
-                        .headers(headers)
-                        .contentLength(outRDataFile.length())
-                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                        .body(resource);
-            }catch(IOException ioe){
-                logger.error(StackTracePrinter.printStackTrace(ioe));
-            }
-
+            re = createFileForResponse(outRDataFile);
             //delete RData file
             deleteFileFromPath(outRDataFile);
         }else{
@@ -307,6 +270,29 @@ public class CTDServiceImpl implements CTDService {
         //delete input files
         deleteFileFromPath(new File(saveLocationMatrix.toAbsolutePath().toString()));
         deleteFileFromPath(new File(saveLocationGeneList.toAbsolutePath().toString()));
+        return re;
+    }
+
+    private ResponseEntity createFileForResponse(File outFile){
+        ResponseEntity re = null;
+        try{
+            Path finalFilePath = Paths.get(outFile.getAbsolutePath());
+            ByteArrayResource resource = new ByteArrayResource(Files.readAllBytes(finalFilePath));
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + finalFilePath.getFileName().toString());
+            headers.add("Cache-Control", "no-cache, no-store, must-revalidate");
+            headers.add("Pragma", "no-cache");
+            headers.add("Expires", "0");
+
+            re = ResponseEntity.ok()
+                    .headers(headers)
+                    .contentLength(outFile.length())
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(resource);
+        }catch(IOException ioe){
+            logger.error(StackTracePrinter.printStackTrace(ioe));
+        }
         return re;
     }
 
@@ -362,6 +348,7 @@ public class CTDServiceImpl implements CTDService {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(csvGenesFile.getInputStream()));
             if(reader == null){
+                logger.error("Unable to open an input stream to the submitted gene list file!");
                 return null;
             }
             genesList = new ArrayList<String>();
@@ -371,7 +358,7 @@ public class CTDServiceImpl implements CTDService {
                 if(line.equals("")){
                     continue;
                 }
-                genesList.add(line);
+                genesList.add(line.trim());
             }
             return genesList;
         } catch (IOException ioe) {
@@ -421,7 +408,7 @@ public class CTDServiceImpl implements CTDService {
             //delete highlyConnectedFile
             deleteFileFromPath(highlyConnectedFile);
 
-            if(content == null){
+            if(content == null || content.size() == 0){
                 return null;
             }
             return content.toArray(new String[0]);
