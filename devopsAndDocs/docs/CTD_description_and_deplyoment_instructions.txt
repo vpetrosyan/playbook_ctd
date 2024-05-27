@@ -15,7 +15,7 @@ The software solution is made of two parts, the JAVA API web app and the R scrip
 The working folder needs to have the following structure:
 
 working_folder/
-	ctd_code_ver11.R
+	ctd_code_verN.R
 	ctdCustomMatrix/
 			ctd_wrapper_cluster.R
 			getPerm_genes_cluster.pbs
@@ -90,7 +90,7 @@ Appendix A - API request and response data formats.
 
 		Input format (string):
 		{
-			"graphType":"kegg_or_string",
+			"graphType":"wikipathways_string",
 			"geneList":[
 				"gene_1",
 				"gene_2"....
@@ -145,7 +145,7 @@ Appendix A - API request and response data formats.
 
 		Form parameters:
 
-		1) "graphType", posible value: "kegg", "string"
+		1) "graphType", posible value: "wikipathways", "string"
 		2) "csvGenesFile", file attached 
 	
 		Response format: Same as in A.1!	
@@ -165,11 +165,36 @@ Appendix A - API request and response data formats.
 		   -F "graphType=kegg" \
 		   -F "csvGenesFile=@\"./genes_file_name.csv\";type=text/csv;filename=\"genes_file_name.csv\"" \
 		 'http://ip:port/rest/playbook_ctd/ctd/file'
- 					
+
+ 	A.3. Create a custom Adjacency Matrix
+
+	    Endpoint: http://ip:8018/rest/playbook_ctd/ctd/createCustomMatrix
+
+		Method: HTTP POST
+
+		HTTP headers:
+		Content-Type: multipart/form-data
+
+		Body Tyle: form
+
+		Form parameters:
+
+		1) "csvExpressionsFile", file attached, csv
+
+		Response: Custom Adjacency Matrix file, csv format.
+
+		curl example:
+
+		Note: Replace genes_expressions.csv with actual file path and name.
+
+		curl -i -X POST \
+		   -H "Content-Type:multipart/form-data" \
+		   -F "csvExpressionsFile=@\"./genes_expressions.csv\";type=text/csv;filename=\"genes_expressions.csv\"" \
+		 'http://ip:port/rest/playbook_ctd/ctd/createCustomMatrix'
+
+	A.4. Create a custom CTD Permutation file
 	
-	A.3. Creater a custom CTD Matrix
-	
-		Endpoint: http://ip:8018/rest/playbook_ctd/getCtdCustomMatrix
+		Endpoint: http://ip:8018/rest/playbook_ctd/ctd/getCustomPermutations
 
 		Method: HTTP POST
 
