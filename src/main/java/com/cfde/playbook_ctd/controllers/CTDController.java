@@ -76,7 +76,7 @@ public class CTDController {
         return ctdService.createCustomMatrix(geneExpressionsCSV);
     }
 
-    @PostMapping(value = "/getCustomPermutations", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @PostMapping(value = "/ctd/getCustomPermutations", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<Resource> getCustomPermutations(@RequestParam("customMatrix") MultipartFile matrix,
                                                           @RequestParam("geneList") MultipartFile geneList){
         if(matrix == null || geneList == null){
