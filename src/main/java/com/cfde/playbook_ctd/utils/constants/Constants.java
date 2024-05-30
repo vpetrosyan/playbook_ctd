@@ -33,6 +33,14 @@ public class Constants {
     public static String USER_ROLLE_USER = "USER";
 
     public static String TIME_PATTERN_SEPARATED = "yyyy-MM-dd hh:mm:ss";
-    public static String TIME_PATTERN_JOINED = "yyyy.MM.dd.hh.mm.ss";
+    public static String TIME_PATTERN_JOINED = "yyyy_MM_dd_hh_mm_ss";
+
+    public static String GRAPH_TYPE_USER_INPUT = "user_input";
+    public static String R_SCRIPT_PATH = "{R_SCRIPT_PATH}";
+    public static String GRAPH_TYPE = "{GRAPH_TYPE}";
+    public static String GENES_FILE_PATH = "{GENES_FILE_PATH}";
+    public static String GENE_EXPRESSIONS_CSV = "{GENE_EXPRESSIONS_CSV}";
+    public static String PERMUTATIONS_FILE_PATH = "{PERMUTATIONS_FILE_PATH}";
+    public static String ADJACENCY_FILE_PATH = "{ADJACENCY_FILE_PATH}";
 }
 

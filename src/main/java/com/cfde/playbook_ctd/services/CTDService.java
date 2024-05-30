@@ -11,7 +11,7 @@ import java.util.ArrayList;
 public interface CTDService {
     ResponseFormat mainCTDList(String graphType, ArrayList<String> geneList);
     ResponseFormat mainCTDFile(String graphType, MultipartFile csvGenesFile);
-    ResponseEntity<Resource> createCustomMatrix(MultipartFile geneExpressionsCSV);
-    ResponseEntity<Resource> getCustomPermutations(MultipartFile matrix, MultipartFile geneList);
-    ResponseFormat useCustomMatrix(MultipartFile matrix, MultipartFile csvGenesFile, MultipartFile customRData);
+    ResponseEntity<Resource> createCustomAdjacency(MultipartFile geneExpressionsCSV);
+    ResponseEntity<Resource> getCustomPermutations(MultipartFile adjacencyJSON, MultipartFile geneList);
+    ResponseFormat useCustomMatrix(MultipartFile geneExpressionsCSV, MultipartFile csvGenesFile, MultipartFile jsonPermutationsFile);
 }

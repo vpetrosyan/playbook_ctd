@@ -69,31 +69,31 @@ public class CTDController {
     }
 
     @PostMapping(value = "/ctd/createCustomMatrix")
-    public ResponseEntity<Resource> createCustomMatrix(@RequestParam("csvExpressionsFile") MultipartFile geneExpressionsCSV){
+    public ResponseEntity<Resource> createCustomAdjacency(@RequestParam("csvExpressionsFile") MultipartFile geneExpressionsCSV){
         if(geneExpressionsCSV == null){
             return null;
         }
-        return ctdService.createCustomMatrix(geneExpressionsCSV);
+        return ctdService.createCustomAdjacency(geneExpressionsCSV);
     }
 
     @PostMapping(value = "/ctd/getCustomPermutations", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<Resource> getCustomPermutations(@RequestParam("customMatrix") MultipartFile matrix,
+    public ResponseEntity<Resource> getCustomPermutations(@RequestParam("customAdjacency") MultipartFile adjacencyJSON,
                                                           @RequestParam("geneList") MultipartFile geneList){
-        if(matrix == null || geneList == null){
+        if(adjacencyJSON == null || geneList == null){
             return null;
         }
-        return ctdService.getCustomPermutations(matrix, geneList);
+        return ctdService.getCustomPermutations(adjacencyJSON, geneList);
     }
 
     @PostMapping(value = "/ctd/useCustomMatrix")
-    public ResponseFormat useCustomMatrix(@RequestParam("customMatrix") MultipartFile matrix,
+    public ResponseFormat useCustomMatrix(@RequestParam("csvExpressionsFile") MultipartFile geneExpressionsCSV,
                                           @RequestParam("csvGenesFile") MultipartFile csvGenesFile,
-                                          @RequestParam("customRData") MultipartFile customRData){
+                                          @RequestParam("jsonPermutationsFile") MultipartFile jsonPermutationsFile){
 
-        if(matrix == null || csvGenesFile == null || customRData == null){
+        if(geneExpressionsCSV == null || csvGenesFile == null || jsonPermutationsFile == null){
             return new ResponseFormat(new Report(Constants.REPORT_TYPE_ERROR,"Request parameters not valid!"));
         }
-        return ctdService.useCustomMatrix(matrix, csvGenesFile, customRData);
+        return ctdService.useCustomMatrix(geneExpressionsCSV, csvGenesFile, jsonPermutationsFile);
     }
 
     private boolean checkSubmittedGraphTypeValue(String graphValue){

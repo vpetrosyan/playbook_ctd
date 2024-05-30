@@ -22,6 +22,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -95,7 +96,7 @@ public class CTDServiceImpl implements CTDService {
     }
 
     @Override
-    public ResponseEntity<Resource> createCustomMatrix(MultipartFile geneExpressionsCSV){
+    public ResponseEntity<Resource> createCustomAdjacency(MultipartFile geneExpressionsCSV){
         String dateTimeJoined = DateUtils.dateToStringParser(new Date(), Constants.TIME_PATTERN_JOINED);
 
         Path saveLocationGeneExpressions = createAbsFilesPath(inputFilePath, createGeneExpressionsFileName(dateTimeJoined));
@@ -103,44 +104,44 @@ public class CTDServiceImpl implements CTDService {
 
         FileUtilities.copyContentToFileAtPath(geneExpressionsCSV, saveLocationGeneExpressions);
 
-        return createACustomMatrixFile(saveLocationGeneExpressions, rScriptLocation);
+        return createCustomAdjacencyFile(saveLocationGeneExpressions, rScriptLocation);
     }
 
     @Override
-    public ResponseEntity<Resource> getCustomPermutations(MultipartFile matrix, MultipartFile geneList){
+    public ResponseEntity<Resource> getCustomPermutations(MultipartFile adjacencyJSON, MultipartFile geneList){
         String dateTimeJoined = DateUtils.dateToStringParser(new Date(), Constants.TIME_PATTERN_JOINED);
 
-        Path saveLocationMatrix = createAbsFilesPath(inputFilePath, createAdjMatrixFileName(dateTimeJoined));
-        Path saveLocationGeneList = createAbsFilesPath(inputFilePath, createGeneSetFileName(dateTimeJoined));
+        Path savePathAdjacencyJSON = createAbsFilesPath(inputFilePath, createAdjacencyJSONFileName(dateTimeJoined));
+        Path savePathGeneList = createAbsFilesPath(inputFilePath, createGeneSetFileName(dateTimeJoined));
         Path rScriptCustomMatrixPath = createAbsFilesPath(ctdCustomMatrixScriptFolderLocation, rCustomMatrixScriptName);
 
-        FileUtilities.copyContentToFileAtPath(matrix, saveLocationMatrix);
-        FileUtilities.copyContentToFileAtPath(geneList, saveLocationGeneList);
+        FileUtilities.copyContentToFileAtPath(adjacencyJSON, savePathAdjacencyJSON);
+        FileUtilities.copyContentToFileAtPath(geneList, savePathGeneList);
 
-        return executeCustomPermutations(saveLocationMatrix, saveLocationGeneList, rScriptCustomMatrixPath);
+        return createCustomPermutationsFile(savePathAdjacencyJSON, savePathGeneList, rScriptCustomMatrixPath);
     }
 
     @Override
-    public ResponseFormat useCustomMatrix(MultipartFile matrix, MultipartFile csvGenesFile, MultipartFile customRData){
+    public ResponseFormat useCustomMatrix(MultipartFile geneExpressionsCSV, MultipartFile csvGenesFile, MultipartFile customRData){
         String dateTimeJoined = DateUtils.dateToStringParser(new Date(), Constants.TIME_PATTERN_JOINED);
 
-        Path saveLocationMatrix = createAbsFilesPath(inputFilePath, createAdjMatrixFileName(dateTimeJoined));
-        Path saveLocationGeneFile = createAbsFilesPath(inputFilePath, createGeneSetFileName(dateTimeJoined));
-        Path saveLocationRData = createAbsFilesPath(inputFilePath, createRDataFileName(dateTimeJoined));
+        Path savePathExpressions = createAbsFilesPath(inputFilePath, createGeneExpressionsFileName(dateTimeJoined));
+        Path savePathGeneFile = createAbsFilesPath(inputFilePath, createGeneSetFileName(dateTimeJoined));
+        Path savePathPermutations = createAbsFilesPath(inputFilePath, createRDataFileName(dateTimeJoined));
         Path rScriptLocation = createAbsFilesPath(null, rScriptName);
 
-        FileUtilities.copyContentToFileAtPath(matrix, saveLocationMatrix);
-        FileUtilities.copyContentToFileAtPath(csvGenesFile, saveLocationGeneFile);
-        FileUtilities.copyContentToFileAtPath(customRData, saveLocationRData);
+        FileUtilities.copyContentToFileAtPath(geneExpressionsCSV, savePathExpressions);
+        FileUtilities.copyContentToFileAtPath(csvGenesFile, savePathGeneFile);
+        FileUtilities.copyContentToFileAtPath(customRData, savePathPermutations);
 
-        return executeCTDRScriptWithCustomFiles(saveLocationMatrix, saveLocationGeneFile, saveLocationRData, rScriptLocation);
+        return executeCTDRScriptWithCustomFiles(savePathExpressions, savePathGeneFile, savePathPermutations, rScriptLocation);
     }
 
     private ResponseFormat excuteCTD_RScript(String graphType, Path rScriptLocation, Path absPathGenesFile){
         //example command: Rscript ctd_code.r -g “string” -i "inputFolder/module_genes.csv"
-        String rScriptFullPathParam = "{R_SCRIPT_PATH}";
-        String graphTypeParam = "{GRAPH_TYPE}";
-        String absPathToGenesFileParam = "{GENES_FILE_PATH}";
+        String rScriptFullPathParam = Constants.R_SCRIPT_PATH;
+        String graphTypeParam = Constants.GRAPH_TYPE;
+        String absPathToGenesFileParam = Constants.GENES_FILE_PATH;
 
         String rScriptFullPath = rScriptLocation.toAbsolutePath().toString();
         String absPathToGenesFileFile = absPathGenesFile.toAbsolutePath().toString();
@@ -161,53 +162,55 @@ public class CTDServiceImpl implements CTDService {
         return of;
     }
 
-    private ResponseFormat executeCTDRScriptWithCustomFiles(Path saveLocationMatrix, Path saveLocationGeneList, Path saveLocationRData, Path rScriptLocation){
-        //example command: Rscript ctd_code.r -g “user_input” -i "inputFolder/module_genes.csv" -a "inputFolder/adj_matrix.csv" -p "inputFolder/adj_matrix_1234.RData"
-        String rScriptFullPathParam = "{R_SCRIPT_PATH}";
-        String graphTypeParam = "{GRAPH_TYPE}";
-        String absPathToMatrixFileParam = "{MATRIX_FILE_PATH}";
-        String absPathToGenesFileParam = "{GENES_FILE_PATH}";
-        String absPathToRDataFileParam = "{RDATA_FILE_PATH}";
+    private ResponseFormat executeCTDRScriptWithCustomFiles(Path savePathExpressions, Path savePathGeneList, Path savePathPermutations, Path rScriptLocation){
+        //example command: Rscript ctd_code.r -g “user_input” -i "inputFolder/module_genes.csv" -e "inputFolder/expressions.json" -p "inputFolder/adj_matrix_1234.json"
+        String rScriptFullPathParam = Constants.R_SCRIPT_PATH;
+        String graphTypeParam = Constants.GRAPH_TYPE;
+        String absPathToExpressionsFileParam = Constants.GENE_EXPRESSIONS_CSV;
+        String absPathToGenesFileParam = Constants.GENES_FILE_PATH;
+        String absPathToPermutationsFileParam = Constants.PERMUTATIONS_FILE_PATH;
 
         String rScriptFullPath = rScriptLocation.toAbsolutePath().toString();
-        String absPathToMatrixFile = saveLocationMatrix.toAbsolutePath().toString();
-        String absPathToGeneListFile = saveLocationGeneList.toAbsolutePath().toString();
-        String absPathToRDataFile = saveLocationRData.toAbsolutePath().toString();
+        String absPathToExpressionsFile = savePathExpressions.toAbsolutePath().toString();
+        String absPathToGeneListFile = savePathGeneList.toAbsolutePath().toString();
+        String absPathToPermutationsFile = savePathPermutations.toAbsolutePath().toString();
 
-        String baseCommand = "Rscript "+rScriptFullPathParam+" -g "+graphTypeParam+" -i "+absPathToGenesFileParam+" -a "+absPathToMatrixFileParam+" -p "+absPathToRDataFileParam;
+        String baseCommand = "Rscript "+rScriptFullPathParam+" -g "+graphTypeParam+" -i "+absPathToGenesFileParam+" -e "+absPathToExpressionsFileParam+" -p "+absPathToPermutationsFileParam;
 
         Map<String, String> values = new HashMap<>();
         values.put(rScriptFullPathParam, rScriptFullPath);
-        values.put(graphTypeParam, "user_input");
-        values.put(absPathToMatrixFileParam, absPathToMatrixFile);
+        values.put(graphTypeParam, Constants.GRAPH_TYPE_USER_INPUT);
+        values.put(absPathToExpressionsFileParam, absPathToExpressionsFile);
         values.put(absPathToGenesFileParam, absPathToGeneListFile);
-        values.put(absPathToRDataFileParam, absPathToRDataFile);
+        values.put(absPathToPermutationsFileParam, absPathToPermutationsFile);
 
         executeShellCommand(baseCommand, values);
 
-        ResponseFormat of = processAndReturnOutputFiles(FilenameUtils.removeExtension(saveLocationGeneList.getFileName().toString()));
+        ResponseFormat of = processAndReturnOutputFiles(FilenameUtils.removeExtension(savePathGeneList.getFileName().toString()));
 
         //deleting gene list csv input file
-        deleteFileFromPath(new File(saveLocationGeneList.toAbsolutePath().toString()));
+        deleteFileFromPath(new File(savePathGeneList.toAbsolutePath().toString()));
         //deleting RData input file
-        deleteFileFromPath(new File(saveLocationRData.toAbsolutePath().toString()));
+        deleteFileFromPath(new File(savePathPermutations.toAbsolutePath().toString()));
         //deleting custom matrix csv input file
-        deleteFileFromPath(new File(saveLocationMatrix.toAbsolutePath().toString()));
+        deleteFileFromPath(new File(savePathExpressions.toAbsolutePath().toString()));
 
         return of;
     }
 
-    private ResponseEntity<Resource> createACustomMatrixFile(Path saveLocationGeneExpressions, Path rScriptLocation){
-        //example command: Rscript ctd_code.r -e “inputFolder/geneExpressions_12345.csv"
-        String rScriptFullPathParam = "{R_SCRIPT_PATH}";
-        String absPathToGeneExpressionsCSVParam = "{GENE_EXPRESSIONS_CSV}";
+    private ResponseEntity<Resource> createCustomAdjacencyFile(Path saveLocationGeneExpressions, Path rScriptLocation){
+        //example command: Rscript ctd_code.r -g “user_input” -e “inputFolder/geneExpressions_12345.csv"
+        String graphTypeParam = Constants.GRAPH_TYPE;
+        String rScriptFullPathParam = Constants.R_SCRIPT_PATH;
+        String absPathToGeneExpressionsCSVParam = Constants.GENE_EXPRESSIONS_CSV;
 
         String rScriptFullPath = rScriptLocation.toAbsolutePath().toString();
         String absPathToGeneExpressionsCSV = saveLocationGeneExpressions.toAbsolutePath().toString();
 
-        String baseCommand = "Rscript "+rScriptFullPathParam+" -e "+absPathToGeneExpressionsCSVParam;
+        String baseCommand = "Rscript "+rScriptFullPathParam+" -g "+graphTypeParam+" -e "+absPathToGeneExpressionsCSVParam;
 
         Map<String, String> values = new HashMap<>();
+        values.put(graphTypeParam, Constants.GRAPH_TYPE_USER_INPUT);
         values.put(rScriptFullPathParam, rScriptFullPath);
         values.put(absPathToGeneExpressionsCSVParam, absPathToGeneExpressionsCSV);
 
@@ -215,61 +218,62 @@ public class CTDServiceImpl implements CTDService {
 
         String customMatrixNameNoExt = FilenameUtils.removeExtension(saveLocationGeneExpressions.getFileName().toString());
         //example output file name: geneExpressions_TIMESTAMP_adjMatrix.csv
-        String customPattern = customMatrixNameNoExt+"\\_adjMatrix.csv";
-        File outMatrixFile = FileUtilities.getFileFromPatternInFolderPath(outputFilePath, customPattern);
+        String customPattern = customMatrixNameNoExt+"_adjMatrix.json";
+        File outAdjacencyJSONFile = FileUtilities.getFileFromPatternInFolderPath(outputFilePath, customPattern);
 
 
         ResponseEntity re = null;
-        if(outMatrixFile != null){
-            logger.info("Found custom matrix file: "+outMatrixFile.getName()+", using pattern: "+customPattern);
-            re = createFileForResponse(outMatrixFile);
+        if(outAdjacencyJSONFile != null){
+            logger.info("Found custom Adjacency JSON file: "+outAdjacencyJSONFile.getName()+", using pattern: "+customPattern);
+            re = createFileForResponse(outAdjacencyJSONFile);
             //delete matrix file
-            deleteFileFromPath(outMatrixFile);
+            deleteFileFromPath(outAdjacencyJSONFile);
         }else{
-            logger.error("Unable to find the RData file in "+outputFilePath+", using patter: "+customPattern);
+            logger.error("Unable to find the Adjacency JSON file in "+outputFilePath+", using patter: "+customPattern);
         }
 
         //deleting custom matrix csv input file
         deleteFileFromPath(new File(saveLocationGeneExpressions.toAbsolutePath().toString()));
+
         return re;
     }
 
-    private ResponseEntity<Resource> executeCustomPermutations(Path saveLocationMatrix, Path saveLocationGeneList, Path rScriptCustomMatrixPath){
-        //example command: Rscript ctd_wrapper_cluster.R “adj_matrix.csv” “module_genes.csv”
-        String rScriptFullPathParam = "{R_SCRIPT_PATH}";
-        String absPathToMatrixFileParam = "{MATRIX_FILE_PATH}";
-        String absPathToGenesFileParam = "{GENES_FILE_PATH}";
+    private ResponseEntity<Resource> createCustomPermutationsFile(Path savePathAdjacencyJSON, Path savePathGeneList, Path rScriptCustomMatrixPath){
+        //example command: Rscript ctd_wrapper_cluster.R “adjacency.json” “module_genes.csv”
+        String rScriptFullPathParam = Constants.R_SCRIPT_PATH;
+        String absPathToAdjacencyFileParam = Constants.ADJACENCY_FILE_PATH;
+        String absPathToGenesFileParam = Constants.GENES_FILE_PATH;
 
-        String absPathToMatrixFile = saveLocationMatrix.toAbsolutePath().toString();
-        String absPathToGenesFile = saveLocationGeneList.toAbsolutePath().toString();
+        String absPathToAdjacencyFile = savePathAdjacencyJSON.toAbsolutePath().toString();
+        String absPathToGenesFile = savePathGeneList.toAbsolutePath().toString();
         String rScriptFullPath = rScriptCustomMatrixPath.toAbsolutePath().toString();
 
-        String baseCommand = "Rscript "+rScriptFullPathParam+" "+absPathToMatrixFileParam+" "+absPathToGenesFileParam;
+        String baseCommand = "Rscript "+rScriptFullPathParam+" "+absPathToAdjacencyFileParam+" "+absPathToGenesFileParam;
 
         Map<String, String> values = new HashMap<>();
         values.put(rScriptFullPathParam, rScriptFullPath);
-        values.put(absPathToMatrixFileParam, absPathToMatrixFile);
+        values.put(absPathToAdjacencyFileParam, absPathToAdjacencyFile);
         values.put(absPathToGenesFileParam, absPathToGenesFile);
 
         executeShellCommand(baseCommand, values);
 
-        String customMatrixNameNoExt = FilenameUtils.removeExtension(saveLocationMatrix.getFileName().toString());
-        String customPattern = customMatrixNameNoExt+"\\_.*\\.RData";
-        File outRDataFile = FileUtilities.getFileFromPatternInFolderPath(outputFilePath, customPattern);
+        String customAdjacencyNameNoExt = FilenameUtils.removeExtension(savePathAdjacencyJSON.getFileName().toString());
+        String customPattern = customAdjacencyNameNoExt+"\\_.*\\.json";
+        File outPermutationsJSONFile = FileUtilities.getFileFromPatternInFolderPath(outputFilePath, customPattern);
 
         ResponseEntity re = null;
-        if(outRDataFile != null){
-            logger.info("Found RData file: "+outRDataFile.getName()+", using pattern: "+customPattern);
-            re = createFileForResponse(outRDataFile);
+        if(outPermutationsJSONFile != null){
+            logger.info("Found Permutations JSON file: "+outPermutationsJSONFile.getName()+", using pattern: "+customPattern);
+            re = createFileForResponse(outPermutationsJSONFile);
             //delete RData file
-            deleteFileFromPath(outRDataFile);
+            deleteFileFromPath(outPermutationsJSONFile);
         }else{
-            logger.error("Unable to find the RData file in "+outputFilePath+", using patter: "+customPattern);
+            logger.error("Unable to find the Permutations JSON file in "+outputFilePath+", using patter: "+customPattern);
         }
 
         //delete input files
-        deleteFileFromPath(new File(saveLocationMatrix.toAbsolutePath().toString()));
-        deleteFileFromPath(new File(saveLocationGeneList.toAbsolutePath().toString()));
+        deleteFileFromPath(new File(savePathAdjacencyJSON.toAbsolutePath().toString()));
+        deleteFileFromPath(new File(savePathGeneList.toAbsolutePath().toString()));
         return re;
     }
 
@@ -437,8 +441,8 @@ public class CTDServiceImpl implements CTDService {
         return "genes_"+dateTimeJoined+".csv";
     }
 
-    private String createAdjMatrixFileName(String dateTimeJoined){
-        return "adjMatrix_"+dateTimeJoined+".csv";
+    private String createAdjacencyJSONFileName(String dateTimeJoined){
+        return "adjMatrix_"+dateTimeJoined+".json";
     }
 
     private String createGeneExpressionsFileName(String dateTimeJoined){
@@ -468,5 +472,26 @@ public class CTDServiceImpl implements CTDService {
         }catch(IOException ioe){
             logger.error(StackTracePrinter.printStackTrace(ioe));
         }
-    }*/
+    }
+
+    //simulate file creation
+        Path savePathTest = createAbsFilesPath(outputFilePath, customMatrixNameNoExt+"_adjMatrix.json");
+        try {
+            Files.createFile(savePathTest);
+            if(Files.exists(savePathTest)){
+                logger.info("Created file: "+savePathTest.toAbsolutePath());
+            }else{
+                logger.info("Unable to create file: "+savePathTest.toAbsolutePath());
+            }
+        } catch (IOException ioe) {
+            logger.error(StackTracePrinter.printStackTrace(ioe));
+        }
+
+        //simulate process duration
+        try {
+            Thread.sleep(5000);
+        } catch (Exception e) {
+            logger.error(StackTracePrinter.printStackTrace(e));
+        }
+    */
 }
