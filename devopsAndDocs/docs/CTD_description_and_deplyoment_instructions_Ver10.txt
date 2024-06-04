@@ -166,7 +166,7 @@ Appendix A - API request and response data formats.
 		   -F "csvGenesFile=@\"./genes_file_name.csv\";type=text/csv;filename=\"genes_file_name.csv\"" \
 		 'http://ip:port/rest/playbook_ctd/ctd/file'
 
- 	A.3. Create a custom Adjacency Matrix
+ 	A.3. Create a custom Adjacency file
 
 	    Endpoint: http://ip:8018/rest/playbook_ctd/ctd/createCustomMatrix
 
@@ -181,7 +181,7 @@ Appendix A - API request and response data formats.
 
 		1) "csvExpressionsFile", file attached, csv
 
-		Response: Custom Adjacency Matrix file, csv format.
+		Response: Custom Adjacency Matrix file, JSON format.
 
 		curl example:
 
@@ -192,7 +192,7 @@ Appendix A - API request and response data formats.
 		   -F "csvExpressionsFile=@\"./genes_expressions.csv\";type=text/csv;filename=\"genes_expressions.csv\"" \
 		 'http://ip:port/rest/playbook_ctd/ctd/createCustomMatrix'
 
-	A.4. Create a custom CTD Permutation file
+	A.4. Create a custom CTD Permutations file
 	
 		Endpoint: http://ip:8018/rest/playbook_ctd/ctd/getCustomPermutations
 
@@ -204,21 +204,21 @@ Appendix A - API request and response data formats.
 		Body Tyle: form
 
 		Form parameters:
-
-		1) "customMatrix", file attached, csv
+		
+		1) "customAdjacency", file attached, json
 		2) "geneList", file attached, csv/txt 
 		
-		Response: Custom RData file.
+		Response: JSON CTD Permutations file.
 		
 		curl example:
 		
-		Note: Replace genes_file_name.csv and matrix_file_name.csv with actual file paths and names.
+		Note: Replace genes_file_name.csv and adjacency_file_name.json with actual file paths and names.
 		
 		curl -i -X POST \
 		   -H "Content-Type:multipart/form-data" \
-		   -F "customMatrix=@\"./matrix_file_name.csv\";type=text/csv;filename=\"matrix_file_name.csv\"" \
+		   -F "customAdjacency=@\"./adjacency_file_name.json\";type=text/csv;filename=\"adjacency_file_name.json\"" \
 		   -F "geneList=@\"./genes_file_name.csv\";type=text/csv;filename=\"genes_file_name.csv\"" \
-		 'http://ip:port/rest/playbook_ctd/getCtdCustomMatrix'
+		 'http://ip:port/rest/playbook_ctd/ctd/getCtdCustomMatrix'
 		
 	A.4. Use a custom CTD Matrix
 	
@@ -233,21 +233,21 @@ Appendix A - API request and response data formats.
 
 		Form parameters:
 
-		1) "customMatrix", file attached, csv
+		1) "csvExpressionsFile", file attached, csv
 		2) "csvGenesFile", file attached, csv/txt 
-		3) "customRData", file attached, RData (this file is the output from API in A.3.)
+		3) "jsonPermutationsFile", file attached, JSON (this file is the output from endpoint A.4.)
 		
 		Response format: Same as in A.1!
 
 		curl example:
 		
-		Note: Replace genes_file_name.csv, matrix_file_name.csv and permutations_file_name.RData with actual file paths and names.
+		Note: Replace genes_file_name.csv, expressions_file_name.csv and permutations_file_name.json with actual file paths and names.
 		
 		curl -i -X POST \
 		   -H "Content-Type:multipart/form-data" \
-		   -F "customMatrix=@\"./matrix_file_name.csv\";type=text/csv;filename=\"matrix_file_name.csv\"" \
+		   -F "csvExpressionsFile=@\"./expressions_file_name.csv\";type=text/csv;filename=\"expressions_file_name.csv\"" \
 		   -F "csvGenesFile=@\"./genes_file_name.csv\";type=text/csv;filename=\"genes_file_name.csv\"" \
-		   -F "customRData=@\"./permutations_file_name.RData\";filename=\"permutations_file_name.RData\"" \
+		   -F "jsonPermutationsFile=@\"./permutations_file_name.json\";filename=\"permutations_file_name.json\"" \
 		 'http://ip:port/rest/playbook_ctd/ctd/useCustomMatrix'
  
 		
